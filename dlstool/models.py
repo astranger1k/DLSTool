@@ -51,6 +51,7 @@ class SirenSettings:
 
 @dataclass
 class DLSv1Data:
+    vehicles: str = ""
     stage1_enabled: bool = True
     stage2_enabled: bool = True
     stage3_enabled: bool = True

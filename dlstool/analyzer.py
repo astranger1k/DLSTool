@@ -1,5 +1,5 @@
 """Utility helpers for summarising parsed DLS data."""
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 from .models import DLSv1Data, DLSv2Data
 
@@ -8,9 +8,18 @@ class DLSAnalyzer:
     """Produce quick summaries of parsed VCF structures."""
 
     @staticmethod
+    def _count_vehicles(raw: Optional[str]) -> int:
+        if not raw:
+            return 0
+        return sum(1 for token in raw.split(',') if token.strip())
+
+    @staticmethod
     def analyze_v1(data: DLSv1Data) -> Dict[str, Any]:
+        vehicles_raw = data.vehicles or ""
         analysis: Dict[str, Any] = {
             "version": "DLS v1",
+            "vehicles": vehicles_raw,
+            "vehicle_count": DLSAnalyzer._count_vehicles(vehicles_raw),
             "stages": {},
             "audio": {},
             "special_features": {},
@@ -77,9 +86,11 @@ class DLSAnalyzer:
 
     @staticmethod
     def analyze_v2(data: DLSv2Data) -> Dict[str, Any]:
+        vehicles_raw = data.vehicles or ""
         analysis: Dict[str, Any] = {
             "version": "DLS v2",
-            "vehicles": data.vehicles,
+            "vehicles": vehicles_raw,
+            "vehicle_count": DLSAnalyzer._count_vehicles(vehicles_raw),
             "light_modes": {},
             "audio_modes": {},
             "total_sirens": 0,

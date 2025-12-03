@@ -29,6 +29,9 @@ class DLSv1Parser:
         root = tree.getroot()
         data = DLSv1Data()
 
+        models_text = root.findtext("Models", "")
+        data.vehicles = models_text.strip() if models_text else ""
+
         stage_settings = root.find("StageSettings")
         if stage_settings is not None:
             data.stage1_enabled = stage_settings.findtext("Stage1Enabled", "true").lower() == "true"

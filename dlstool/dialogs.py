@@ -56,6 +56,11 @@ class ConfigEditorDialog(QtWidgets.QDialog):
         layout.addRow(QtWidgets.QLabel("<i>Enable or disable light stages. Stages define different siren patterns.</i>"))
         layout.addRow(QtWidgets.QLabel(""))
 
+        self.v1_vehicles = QtWidgets.QLineEdit(self.data.vehicles)
+        self.v1_vehicles.setPlaceholderText("police,police2")
+        layout.addRow("Vehicles (Models tag):", self.v1_vehicles)
+        layout.addRow(QtWidgets.QLabel(""))
+
         self.stage1_enabled = QtWidgets.QCheckBox()
         self.stage1_enabled.setChecked(self.data.stage1_enabled)
         self.stage1_enabled.setToolTip("Primary siren pattern (usually activated with 'Q')")
@@ -310,6 +315,7 @@ class ConfigEditorDialog(QtWidgets.QDialog):
     # --- Save ------------------------------------------------------------
     def save_changes(self):
         if self.version == DLSVersion.V1:
+            self.data.vehicles = self.v1_vehicles.text().strip()
             self.data.stage1_enabled = self.stage1_enabled.isChecked()
             self.data.stage2_enabled = self.stage2_enabled.isChecked()
             self.data.stage3_enabled = self.stage3_enabled.isChecked()

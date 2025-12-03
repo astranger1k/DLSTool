@@ -13,6 +13,8 @@ class V1ToV2Converter:
     def convert(v1_data: DLSv1Data) -> DLSv2Data:
         logger.info("Converting DLS v1 to v2...")
         v2_data = DLSv2Data()
+        if v1_data.vehicles:
+            v2_data.vehicles = v1_data.vehicles
 
         audio_map = [
             ("Siren1", v1_data.tone1, "slow"),
@@ -52,6 +54,7 @@ class V2ToV1Converter:
     def convert(v2_data: DLSv2Data) -> DLSv1Data:
         logger.info("Converting DLS v2 to v1...")
         v1_data = DLSv1Data()
+        v1_data.vehicles = (v2_data.vehicles or "").strip()
 
         sound_map = {
             "slow": "VEHICLES_HORNS_SIREN_1",

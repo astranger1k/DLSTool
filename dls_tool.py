@@ -208,7 +208,16 @@ class DlsToolApp(QtWidgets.QMainWindow):
         # Analysis section
         left_layout.addWidget(QtWidgets.QLabel("<b>Analysis</b>"))
 
-        self._build_analysis_summary(left_layout)
+        self.analysis_panel = QtWidgets.QStackedWidget()
+        self.analysis_overlay = self._create_analysis_overlay()
+        self.analysis_panel.addWidget(self.analysis_overlay)
+
+        self.analysis_content_widget = QtWidgets.QWidget()
+        analysis_content_layout = QtWidgets.QVBoxLayout(self.analysis_content_widget)
+        analysis_content_layout.setContentsMargins(0, 0, 0, 0)
+        analysis_content_layout.setSpacing(6)
+
+        self._build_analysis_summary(analysis_content_layout)
 
         self.analysis_tree = QtWidgets.QTreeWidget()
         self.analysis_tree.setColumnCount(2)
@@ -217,9 +226,13 @@ class DlsToolApp(QtWidgets.QMainWindow):
         self.analysis_tree.setRootIsDecorated(True)
         self.analysis_tree.setIndentation(14)
         self.analysis_tree.setUniformRowHeights(True)
-        left_layout.addWidget(self.analysis_tree)
+        analysis_content_layout.addWidget(self.analysis_tree)
         self._show_analysis_placeholder()
         self.analysis_tree.itemDoubleClicked.connect(self._on_analysis_item_activated)
+
+        self.analysis_panel.addWidget(self.analysis_content_widget)
+        left_layout.addWidget(self.analysis_panel)
+        self._set_analysis_overlay_visible(True)
 
         self.analyze_button = QtWidgets.QPushButton("Analyze File")
         self.analyze_button.setIcon(QtWidgets.QApplication.style().standardIcon(QtWidgets.QStyle.StandardPixmap.SP_FileDialogInfoView))
@@ -252,6 +265,7 @@ class DlsToolApp(QtWidgets.QMainWindow):
 
         # Prompt for GTAV root on startup
         QtCore.QTimer.singleShot(0, self._auto_prompt_gtav_root)
+        self._clear_loaded_vcf()
 
     def _on_gtav_root_selected(self, idx: int):
         if idx < 0 or idx >= len(self.gtav_roots):
@@ -260,6 +274,7 @@ class DlsToolApp(QtWidgets.QMainWindow):
         path = entry.get('path')
         if not path:
             return
+        self._clear_loaded_vcf()
         # Switch context to selected root
         self.gtav_root = path
         plugins_dir = os.path.join(path, 'plugins')
@@ -339,6 +354,7 @@ class DlsToolApp(QtWidgets.QMainWindow):
                     self.dls_dll_path = os.path.join(plugins_dir, 'DLS.dll')
                     self.dls_ini_path = os.path.join(plugins_dir, 'DLS.ini')
                     dls_vcf_dir = os.path.join(plugins_dir, 'DLS')
+                    self._clear_loaded_vcf()
                     
                     # Parse INI if exists
                     self.dls_ini = None
@@ -385,6 +401,7 @@ class DlsToolApp(QtWidgets.QMainWindow):
 
         # Detect plugin version (from file version if available)
         self.dls_plugin_version = None
+        self._clear_loaded_vcf()
 
         # Parse INI if exists
         self.dls_ini = None
@@ -525,6 +542,8 @@ class DlsToolApp(QtWidgets.QMainWindow):
         if not folder_path:
             return
         
+        self._clear_loaded_vcf()
+
         try:
             self.current_folder = folder_path
             self.folder_files = []
@@ -686,17 +705,19 @@ class DlsToolApp(QtWidgets.QMainWindow):
     def load_file_by_path(self, file_path: str):
         """Load a VCF file from a given path"""
         try:
-            self.current_file = file_path
             self.statusBar().showMessage(f"Loading {file_path}...")
-            
-            # Detect version
-            self.current_version = self.detect_version(file_path)
-            # Show version labels now that a VCF is loaded
+
+            detected_version = self.detect_version(file_path)
+            if detected_version in (None, DLSVersion.UNKNOWN):
+                QtWidgets.QMessageBox.warning(self, "Unknown Format", "Could not detect DLS version")
+                self._clear_loaded_vcf()
+                return
+
+            self.current_version = detected_version
             self.version_label.setText(self.current_version.value.upper())
             self._version_text_label.show()
             self.version_label.show()
-            
-            # Load data
+
             if self.current_version == DLSVersion.V1:
                 self.v1_data = DLSv1Parser.parse(file_path)
                 self.v2_data = None
@@ -710,21 +731,21 @@ class DlsToolApp(QtWidgets.QMainWindow):
                 self.convert_v2_to_v1_button.setEnabled(True)
                 self.edit_config_button.setEnabled(True)
             else:
-                QtWidgets.QMessageBox.warning(self, "Unknown Format", "Could not detect DLS version")
+                QtWidgets.QMessageBox.warning(self, "Unsupported Format", "This file is neither DLS v1 nor v2.")
+                self._clear_loaded_vcf()
                 return
-            
+
             self.analyze_button.setEnabled(True)
-            
-            # Load XML preview
+
             with open(file_path, 'r', encoding='utf-8') as f:
                 self.xml_preview.setPlainText(f.read())
-            
+
+            self.current_file = file_path
+            self._set_analysis_overlay_visible(False)
             self.statusBar().showMessage(f"Loaded {file_path}")
-            
-            # Auto-analyze
+
             self.analyze_file()
-            
-            # Highlight in file list if present
+
             import os
             filename = os.path.basename(file_path)
             for i in range(self.file_list.count()):
@@ -732,9 +753,10 @@ class DlsToolApp(QtWidgets.QMainWindow):
                 if item.text() == filename:
                     self.file_list.setCurrentItem(item)
                     break
-            
+
         except Exception as e:
             logger.error(f"Error loading file: {e}", exc_info=True)
+            self._clear_loaded_vcf()
             QtWidgets.QMessageBox.critical(self, "Error", f"Failed to load file:\n{str(e)}")
     
     def detect_version(self, file_path: str) -> DLSVersion:
@@ -863,24 +885,24 @@ class DlsToolApp(QtWidgets.QMainWindow):
         ]
 
         self.summary_value_labels: Dict[str, QtWidgets.QLabel] = {}
+        palette = QtWidgets.QApplication.palette()
+        border_color = palette.color(QtGui.QPalette.ColorRole.Mid).name()
+        text_color = palette.color(QtGui.QPalette.ColorRole.WindowText).name()
 
         for idx, (key, label_text) in enumerate(metrics):
             card = QtWidgets.QFrame()
             card.setFrameShape(QtWidgets.QFrame.Shape.StyledPanel)
             card.setStyleSheet(
-                "QFrame {"
-                "background-color: #f6f8fb;"
-                "border: 1px solid #dfe3ed;"
-                "border-radius: 8px;"
-                "padding: 8px;"
-                "}"
+                f"QFrame {{ border: 1px solid {border_color}; border-radius: 8px; padding: 8px; }}"
             )
             card_layout = QtWidgets.QVBoxLayout(card)
             card_layout.setContentsMargins(6, 4, 6, 6)
             title = QtWidgets.QLabel(label_text)
-            title.setStyleSheet("color: #5c667a; font-size: 10px; text-transform: uppercase;")
+            title.setStyleSheet(
+                f"color: {text_color}; font-size: 10px; text-transform: uppercase; opacity: 0.8;"
+            )
             value = QtWidgets.QLabel("–")
-            value.setStyleSheet("font-size: 18px; font-weight: 600; color: #111826;")
+            value.setStyleSheet(f"font-size: 18px; font-weight: 600; color: {text_color};")
             card_layout.addWidget(title)
             card_layout.addWidget(value)
             card_layout.addStretch()
@@ -905,7 +927,16 @@ class DlsToolApp(QtWidgets.QMainWindow):
                 self.summary_value_labels[key].setText(str(value))
 
         version = analysis.get("version", "–")
-        vehicles = analysis.get("vehicles") or "–"
+        vehicle_count = analysis.get("vehicle_count")
+        if vehicle_count is None:
+            vehicles_raw = analysis.get("vehicles")
+            if isinstance(vehicles_raw, str):
+                tokens = [part.strip() for part in vehicles_raw.split(',') if part.strip()]
+                vehicle_count = len(tokens)
+        if vehicle_count is None:
+            vehicles_display = "–"
+        else:
+            vehicles_display = str(vehicle_count)
         total_sirens = analysis.get("total_sirens", 0)
         stages = analysis.get("stages") or {}
         active_stages = sum(1 for info in stages.values() if info.get("enabled")) if stages else "–"
@@ -913,11 +944,80 @@ class DlsToolApp(QtWidgets.QMainWindow):
         audio_modes = len(analysis.get("audio_modes", {})) or "–"
 
         set_value("version", version)
-        set_value("vehicles", vehicles)
+        set_value("vehicles", vehicles_display)
         set_value("total_sirens", total_sirens)
         set_value("active_stages", active_stages)
         set_value("light_modes", light_modes)
         set_value("audio_modes", audio_modes)
+
+    def _create_analysis_overlay(self) -> QtWidgets.QWidget:
+        overlay = QtWidgets.QFrame()
+        overlay.setFrameShape(QtWidgets.QFrame.Shape.StyledPanel)
+        palette = QtWidgets.QApplication.palette()
+        border_color = palette.color(QtGui.QPalette.ColorRole.Mid).name()
+        overlay.setStyleSheet(
+            f"QFrame {{ border: 1px dashed {border_color}; border-radius: 8px; background: palette(Base); }}"
+        )
+
+        layout = QtWidgets.QVBoxLayout(overlay)
+        layout.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
+        layout.setSpacing(12)
+        layout.setContentsMargins(24, 24, 24, 24)
+
+        icon_label = QtWidgets.QLabel()
+        icon = QtWidgets.QApplication.style().standardIcon(QtWidgets.QStyle.StandardPixmap.SP_FileIcon)
+        icon_label.setPixmap(icon.pixmap(48, 48))
+        layout.addWidget(icon_label, alignment=QtCore.Qt.AlignmentFlag.AlignHCenter)
+
+        title = QtWidgets.QLabel("Select a VCF file to see analysis")
+        title.setWordWrap(True)
+        title.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
+        title.setStyleSheet("font-size: 14px; font-weight: 600;")
+        layout.addWidget(title)
+
+        subtitle = QtWidgets.QLabel("Choose a file from the explorer or browse manually to load it here.")
+        subtitle.setWordWrap(True)
+        subtitle.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
+        subtitle.setStyleSheet("color: palette(Mid);")
+        layout.addWidget(subtitle)
+
+        browse_btn = QtWidgets.QPushButton("Open VCF...")
+        browse_btn.setFixedWidth(160)
+        browse_btn.clicked.connect(self._on_load_file_clicked)
+        layout.addWidget(browse_btn, alignment=QtCore.Qt.AlignmentFlag.AlignHCenter)
+
+        hint = QtWidgets.QLabel("Tip: Use the file list above to pick a VCF from the current folder.")
+        hint.setWordWrap(True)
+        hint.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
+        hint.setStyleSheet("font-size: 10px; color: palette(Mid);")
+        layout.addWidget(hint)
+
+        return overlay
+
+    def _set_analysis_overlay_visible(self, visible: bool):
+        if not hasattr(self, "analysis_panel"):
+            return
+        target = self.analysis_overlay if visible else self.analysis_content_widget
+        if self.analysis_panel.currentWidget() is not target:
+            self.analysis_panel.setCurrentWidget(target)
+
+    def _clear_loaded_vcf(self):
+        """Reset state when no VCF is loaded."""
+        self.current_file = None
+        self.current_version = DLSVersion.UNKNOWN
+        self.v1_data = None
+        self.v2_data = None
+        self.xml_preview.clear()
+        self.analyze_button.setEnabled(False)
+        self.convert_v1_to_v2_button.setEnabled(False)
+        self.convert_v2_to_v1_button.setEnabled(False)
+        self.edit_config_button.setEnabled(False)
+        self._version_text_label.hide()
+        self.version_label.hide()
+        self.version_label.clear()
+        self._reset_analysis_summary()
+        self._show_analysis_placeholder("Select a VCF to analyze")
+        self._set_analysis_overlay_visible(True)
 
     def _populate_analysis_tree(self, analysis: Dict[str, Any]):
         """Render the structured analysis data as interactive tree items."""
