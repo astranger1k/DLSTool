@@ -1,8 +1,2 @@
 # PySide6
 PySide6>=6.2.0
-# NumPy
-numpy>=1.21.0
-# Requests
-requests>=2.26.0
-# Pandas
-pandas>=1.3.0

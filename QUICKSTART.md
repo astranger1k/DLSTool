@@ -1,187 +1,142 @@
-# Quick Start Guide - DLS Tool
+# Quick Start Guide – DLS Tool
 
-> [!IMPORTANT] 
-> This will get easier with future releases, where the tool will be packaged as an executable.
-> For now, follow these steps to set up and run DLS Tool.
+The DLS Tool lets you inspect and convert GTA V Dynamic Lighting System (DLS) vehicle configuration files (VCF). This guide focuses on the fastest path from repository clone to converting your first file, regardless of operating system.
 
-## 🚀 Getting Started in 4 Steps
+> [!NOTE]
+> A packaged release is planned. Until then you run the tool directly from source.
 
-### 1. Download/Clone
+## 1. Requirements
+
+- Python 3.10 or newer (3.12 recommended)
+- Git (optional; you can also download a ZIP from GitHub)
+- Basic familiarity with your OS terminal or PowerShell
+
+## 2. Get the Source
 
 ```bash
 git clone https://github.com/astranger1k/DLSTool.git
 cd DLSTool
 ```
 
-### 2. Setup Virtual Environment
+Alternatively download the repository ZIP from GitHub, extract it, and open the folder in your terminal or VS Code.
+
+## 3. Create a Virtual Environment (recommended)
+
+| Platform | Command |
+| --- | --- |
+| Windows | `python -m venv env` |
+| macOS / Linux | `python3 -m venv env` |
+
+Activate it:
+
+| Platform | Command |
+| --- | --- |
+| Windows PowerShell | `./env/Scripts/Activate.ps1` |
+| Windows cmd | `env\Scripts\activate.bat` |
+| macOS / Linux | `source env/bin/activate` |
+
+## 4. Install Dependencies
 
 ```bash
-python -m venv env
+pip install -r requirements.txt
 ```
 
-### 3. Install Dependencies
+PySide6 is the only external dependency today. If installation fails, upgrade pip first (`python -m pip install --upgrade pip`).
 
-```bash
-# Activate the virtual environment
-.\env\Scripts\Activate.ps1
-
-# (If needed) Install dependencies
-pip install -r ./requirements.txt
-```
-
-### 4. Run
+## 5. Launch the UI
 
 ```bash
 python dls_tool.py
 ```
 
-### 4. Convert
+The main window opens with three primary regions:
 
-1. Click **"Load VCF File"** to load a single file
-   - OR -
-2. Click **"Browse Folder"** to browse a folder with multiple VCF files
-3. Click on any file in the list to load it
-4. Click **"Convert V1 → V2"** or **"Convert V2 → V1"**
-5. Save the converted file
+1. **Explorer** – browse folders or individual VCFs.
+2. **Analysis Panel** – immediate summary (version, vehicles, siren counts, light/audio modes).
+3. **XML Preview** – syntax highlighted view with click-to-jump from the analysis tree.
 
-## 📝 Example Workflow
+## 6. Basic Workflow
 
-### Converting a V1 Police Vehicle to V2
+1. **Load files**
+   - *Single file*: click **Load VCF File**.
+   - *Folder*: click **Browse Folder** to index every XML underneath.
+2. **Inspect**
+   - Summary cards show version, vehicle count, sirens, etc.
+   - Tree view lists stages/light/audio modes and lets you jump to XML markers.
+3. **Convert**
+   - Use **Convert V1 → V2** or **Convert V2 → V1**.
+   - Review the warning dialog for feature loss (v2→v1 truncates after five modes and strips extras/conditions).
+4. **Save**
+   - Choose an output path; the tool never overwrites the source automatically.
 
-1. **Load**: Open `DLSv1/Templates/police.xml`
-2. **Analyze**: Review the analysis panel
-   - You'll see 3 stages enabled
-   - 60 total sirens
-   - All audio settings
-3. **Convert**: Click **"Convert V1 → V2"**
-4. **Save**: Choose output location (e.g., `police_v2.xml`)
-5. **Done**: You now have a v2 file with all sirens and audio preserved!
+### Folder browsing perks
 
-### Converting a V2 File to V1
+- Quickly compare multiple vehicles without re-opening dialogs.
+- Filter by subdirectories using the breadcrumbs.
+- Conversion buttons stay enabled for the currently selected file.
 
-1. **Load**: Open `DLSv2/Templates/default.xml`
-2. **Analyze**: Review the analysis panel
-   - You'll see 19 light modes
-   - 61 total sirens
-3. **Convert**: Click **"Convert V2 → V1"**
-   - ⚠️ **Warning**: You'll see a dialog about feature loss
-   - Only first 5 modes will be converted
-   - Conditions, triggers, extras will be lost
-4. **Save**: Choose output location (e.g., `default_v1.xml`)
-5. **Review**: The v1 file will have up to 5 stages
+## 7. Example Conversions
 
-### Working with Multiple Files (Folder Browsing)
+| Scenario | Steps |
+| --- | --- |
+| **Template v1 → v2** | Load `DLSv1/Templates/police.xml`, review the analysis (3 stages, ~60 sirens), click **Convert V1 → V2**, save as `police_v2.xml`. |
+| **Template v2 → v1** | Load `DLSv2/Templates/default.xml`, note the 19 light modes, click **Convert V2 → V1**, acknowledge the feature-loss warning, save as `default_v1.xml`. The result keeps the first five modes only. |
 
-1. **Browse**: Click **"Browse Folder"**
-2. **Select**: Choose a folder containing multiple VCF files
-3. **View List**: All XML files appear in the left panel
-4. **Load**: Click any file name to load it
-5. **Convert**: Convert each file as needed
-6. **Repeat**: Quickly switch between files without re-browsing
-
-**Benefits:**
-
-- Compare different vehicle configurations
-- Batch convert multiple files
-- Organize your VCF library
-- Quick access to all files in a folder
-
-## 🧪 Testing
-
-Run the test suite to verify everything works:
+## 8. Testing the Tooling
 
 ```bash
 python test_conversion.py
 ```
 
-This will:
+The script parses both templates, runs v1→v2 and v2→v1 conversions, performs a round-trip accuracy check, and emits sample output files (`test_v1_to_v2_output.xml`, `test_v2_to_v1_output.xml`). Use this whenever you pull new changes or tweak conversion logic.
 
-- Parse both template files
-- Convert v1 → v2
-- Convert v2 → v1
-- Test round-trip conversion
-- Generate output files for inspection
+## 9. Best Practices & Tips
 
-## 💡 Tips
+- **Backup everything** before editing or converting live VCFs.
+- **Start with templates** to verify your environment before touching production files.
+- **Watch the console** for warnings about unsupported features or parsing issues.
+- **Review the analysis overlay**; it highlights missing data such as absent vehicles lists or disabled stages.
 
-### Best Practices
+### Understanding the analysis panel
 
-- **Backup**: Always keep a backup of your original files
-- **Test First**: Use the templates to test conversions before working with custom files
-- **Check Analysis**: Review the analysis panel to understand what's in your file
-- **Read Warnings**: Pay attention to warning messages about feature loss
+- **v1 files** list stage enablement, siren counts, BPM, audio tones, and traffic advisory data.
+- **v2 files** summarize light modes (sirens + extras), audio modes, vehicle count, and whether pattern sync / audio control groups exist.
 
-### Understanding the Analysis Panel
+## 10. FAQ
 
-**v1 Files Show:**
+**Why do some features disappear after v2→v1 conversion?**  
+The v1 schema lacks conditions, triggers, extras, animations, and more. The tool warns you before conversion and logs what was dropped.
 
-- ✓ = Stage enabled, ✗ = Stage disabled
-- Siren count per stage
-- BPM (beats per minute)
-- Audio tone settings
+**Can I convert v1→v2→v1 without losing anything?**  
+Core siren/audio data survives, but v1-only metadata (e.g., traffic advisory patterns) may diverge after round-tripping.
 
-**v2 Files Show:**
-
-- Light modes with siren counts
-- Audio modes with soundsets
-- Extras count per mode
-- V2-specific features (pattern sync, speed drift)
-
-## ❓ Common Questions
-
-**Q: Why are some features missing after v2→v1 conversion?**  
-A: v1 doesn't support v2 features like conditions, triggers, extras, animations, etc. These are inherent format limitations.
-
-**Q: Can I convert v1→v2→v1 without loss?**  
-A: Basic siren and audio settings survive the round-trip. However, v1-specific features like traffic advisory patterns may not.
-
-**Q: How many modes can I convert from v2 to v1?**  
-A: Maximum 5 modes (Stage1-3, CustomStage1-2) due to v1 limitations.
-
-**Q: The GUI won't start?**  
-A: Make sure you've activated the virtual environment and installed PySide6:
+**The GUI will not start. What now?**  
+Ensure the virtual environment is active and PySide6 installed. On Windows PowerShell:
 
 ```bash
-.\env\Scripts\Activate.ps1
+./env/Scripts/Activate.ps1
 pip install PySide6
 python dls_tool.py
 ```
 
-## 🔍 Troubleshooting
+**How many v2 modes can I keep when going to v1?**  
+Five (Stage1–Stage3, CustomStage1–CustomStage2). Extra modes are skipped with a warning.
 
-### Issue: "Module not found: PySide6"
+## 11. Troubleshooting
 
-**Solution**: Install PySide6 in your virtual environment
+| Issue | Fix |
+| --- | --- |
+| `ModuleNotFoundError: PySide6` | Activate the venv, reinstall requirements. |
+| "Failed to parse XML" | Validate the XML, ensure it's a DLS VCF, try opening one of the provided templates. |
+| "Conversion produces unexpected results" | Run `python test_conversion.py`, check logs for warnings, compare with template output. |
 
-```bash
-.\env\Scripts\Activate.ps1
-pip install PySide6
-```
+## 12. Where to go next
 
-### Issue: "Failed to parse XML"
-
-**Solution**:
-
-- Verify your file is a valid DLS VCF XML file
-- Check for XML syntax errors
-- Test with the included templates first
-
-### Issue: "Conversion produces unexpected results"
-
-**Solution**:
-
-- Run the test suite first: `python test_conversion.py`
-- Check the console logs for warnings
-- Compare with template conversions
-- Verify your source file is not corrupted
-
-## 📚 Next Steps
-
-- Read the full [README.md](README.md) for technical details
-- Explore the source code to understand the conversion logic
-- Check the DLS v1 and v2 source folders for reference
-- Experiment with the template files
+- Read [README.md](README.md) for deeper technical context.
+- Inspect `DLSv1/` and `DLSv2/` sample projects for schema references.
+- Explore the `dlstool/` package to understand parsers, analyzers, and converters.
+- Share bugs or ideas via GitHub issues.
 
 ---
 
-**Need Help?** Check the console output for detailed logs and warnings.
+Questions? The console log is verbose—start there, then open an issue if you need more help.
