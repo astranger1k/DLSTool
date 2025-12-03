@@ -1,22 +1,42 @@
 # Quick Start Guide - DLS Tool
 
-## 🚀 Getting Started in 3 Steps
+> [!IMPORTANT] 
+> This will get easier with future releases, where the tool will be packaged as an executable.
+> For now, follow these steps to set up and run DLS Tool.
 
-### 1. Install
+## 🚀 Getting Started in 4 Steps
+
+### 1. Download/Clone
+
+```bash
+git clone https://github.com/astranger1k/DLSTool.git
+cd DLSTool
+```
+
+### 2. Setup Virtual Environment
+
+```bash
+python -m venv env
+```
+
+### 3. Install Dependencies
+
 ```bash
 # Activate the virtual environment
 .\env\Scripts\Activate.ps1
 
 # (If needed) Install dependencies
-pip install PySide6
+pip install -r ./requirements.txt
 ```
 
-### 2. Run
+### 4. Run
+
 ```bash
 python dls_tool.py
 ```
 
-### 3. Convert
+### 4. Convert
+
 1. Click **"Load VCF File"** to load a single file
    - OR -
 2. Click **"Browse Folder"** to browse a folder with multiple VCF files
@@ -60,6 +80,7 @@ python dls_tool.py
 6. **Repeat**: Quickly switch between files without re-browsing
 
 **Benefits:**
+
 - Compare different vehicle configurations
 - Batch convert multiple files
 - Organize your VCF library
@@ -74,6 +95,7 @@ python test_conversion.py
 ```
 
 This will:
+
 - Parse both template files
 - Convert v1 → v2
 - Convert v2 → v1
@@ -83,6 +105,7 @@ This will:
 ## 💡 Tips
 
 ### Best Practices
+
 - **Backup**: Always keep a backup of your original files
 - **Test First**: Use the templates to test conversions before working with custom files
 - **Check Analysis**: Review the analysis panel to understand what's in your file
@@ -91,12 +114,14 @@ This will:
 ### Understanding the Analysis Panel
 
 **v1 Files Show:**
+
 - ✓ = Stage enabled, ✗ = Stage disabled
 - Siren count per stage
 - BPM (beats per minute)
 - Audio tone settings
 
 **v2 Files Show:**
+
 - Light modes with siren counts
 - Audio modes with soundsets
 - Extras count per mode
@@ -115,6 +140,7 @@ A: Maximum 5 modes (Stage1-3, CustomStage1-2) due to v1 limitations.
 
 **Q: The GUI won't start?**  
 A: Make sure you've activated the virtual environment and installed PySide6:
+
 ```bash
 .\env\Scripts\Activate.ps1
 pip install PySide6
@@ -124,20 +150,26 @@ python dls_tool.py
 ## 🔍 Troubleshooting
 
 ### Issue: "Module not found: PySide6"
+
 **Solution**: Install PySide6 in your virtual environment
+
 ```bash
 .\env\Scripts\Activate.ps1
 pip install PySide6
 ```
 
 ### Issue: "Failed to parse XML"
-**Solution**: 
+
+**Solution**:
+
 - Verify your file is a valid DLS VCF XML file
 - Check for XML syntax errors
 - Test with the included templates first
 
 ### Issue: "Conversion produces unexpected results"
+
 **Solution**:
+
 - Run the test suite first: `python test_conversion.py`
 - Check the console logs for warnings
 - Compare with template conversions
